@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>JS Code Editor</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .dark-mode {
+            background-color: #1e1e1e;
+            color: white;
+        }
+        .dark-mode .sidebar, .dark-mode .editor-container {
+            background: #252526;
+            color: white;
+        }
+        .dark-mode .header {
+            background: #333;
+        }
+        .dark-mode .output-container {
+            background: black;
+            color: #00ff00;
+        }
+        .dark-mode .line-numbers {
+            background: #2d2d2d;
+            color: #6e6e6e;
+        }
+
+        .light-mode {
+            background: #ffffff;
+            color: black;
+        }
+        .light-mode .sidebar, .light-mode .editor-container {
+            background: #f4f4f4;
+            color: black;
+        }
+        .light-mode .header {
+            background: #ddd;
+        }
+        .light-mode .output-container {
+            background: #f8f8f8;
+            color: #007700;
+        }
+        .light-mode .line-numbers {
+            background: #ececec;
+            color: #999;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            padding: 10px;
+            border-right: 1px solid var(--border-color);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            padding: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            border-radius: 5px;
+        }
+        .sidebar li:hover {
+            background: rgba(128, 128, 128, 0.1);
+        }
+        .active-file::before {
+            content: "➤";
+            margin-right: 5px;
+        }
+
+        .main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .btn {
+            background: #007acc;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+            margin-left: 10px;
+        }
+        .btn:hover {
+            background: #005f99;
+        }
+        .btn.clear {
+            background: #dc3545;
+        }
+        .btn.clear:hover {
+            background: #bb2d3b;
+        }
+
+        .theme-toggle, .fullscreen-btn {
+            font-size: 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: inherit;
+            margin-left: 10px;
+        }
+
+        .editor-section, .output-section {
+            flex: 1;
+            display: flex;
+            position: relative;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .line-numbers {
+            padding: 10px 15px;
+            text-align: right;
+            font-family: monospace;
+            user-select: none;
+            min-width: 45px;
+            border-right: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.05);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .output-section .line-numbers {
+            color: #666;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.08);
+            position: sticky;
+            left: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .output-container {
+            flex: 1;
+            padding: 10px 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Update dark mode styles */
+        .dark-mode .line-numbers {
+            background: rgba(255, 255, 255, 0.05);
+            border-right-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .output-section .line-numbers {
+            color: #888;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .add-file-btn {
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            font-size: 20px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+            transition: background 0.3s;
+        }
+        .add-file-btn:hover {
+            background: #005f99;
+        }
+
+        .editor-container, .output-container {
+            flex: 1;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .editor-container {
+            outline: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            .btn {
+                padding: 8px 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                max-height: 150px;
+            }
+        }
+    </style>
+  </head>
+  <body class="light-mode">
+    <div class="container">
+        <div class="sidebar">
+            <h2>Explorer <button class="add-file-btn" onclick="createFile()">+</button></h2>
+            <ul id="file-list"></ul>
+        </div>
+
+        <div class="main">
+            <div class="header">
+                <span>JavaScript Code Editor</span>
+                <div>
+                    <button class="btn" onclick="runCode()">Run</button>
+                    <button class="btn clear" onclick="clearOutput()">Clear</button>
+                    <button class="theme-toggle" onclick="toggleTheme()">☀</button>
+                    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+                    <button class="btn" onclick="clearEditor()">Clear Editor</button>
+                    <button class="btn" onclick="clearOutput()">Clear Output</button>
+                </div>
+            </div>
+
+            <div class="editor-section">
+                <div class="line-numbers" id="editor-line-numbers"></div>
+                <div id="editor" class="editor-container" contenteditable="true" spellcheck="false"></div>
+            </div>
+
+            <div class="output-section">
+                <div class="line-numbers" id="output-line-numbers"></div>
+                <div id="output" class="output-container">Output will be displayed here...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        const editor = document.getElementById('editor');
+        const output = document.getElementById('output');
+        const editorLineNumbers = document.getElementById('editor-line-numbers');
+        const outputLineNumbers = document.getElementById('output-line-numbers');
+
+        function updateLineNumbers(content, lineNumbersContainer) {
+            const lines = content.split('\n');
+            const numbers = lines.map((_, i) => 
+                `<div style="padding: 0 2px">${i + 1}</div>`
+            ).join('');
+            lineNumbersContainer.innerHTML = numbers;
+
+            // Ensure the output container line height matches
+            const container = lineNumbersContainer.nextElementSibling;
+            if (container) {
+                container.style.minHeight = 
+                    (lines.length * parseFloat(getComputedStyle(container).lineHeight)) + 'px';
+            }
+        }
+
+        function createFile() {
+            const fileName = prompt("Enter file name:");
+            if (!fileName) return;
+            const files = JSON.parse(localStorage.getItem("files")) || {};
+            files[fileName] = "";
+            localStorage.setItem("files", JSON.stringify(files));
+            loadFiles();
+        }
+
+        function loadFiles() {
+            const fileList = document.getElementById("file-list");
+            fileList.innerHTML = "";
+            const files = JSON.parse(localStorage.getItem("files")) || {};
+            Object.keys(files).forEach(fileName => {
+                const li = document.createElement("li");
+                li.textContent = fileName;
+                li.classList.toggle("active-file", fileName === currentFile);
+                li.onclick = () => openFile(fileName);
+                fileList.appendChild(li);
+            });
+        }
+
+        function openFile(fileName) {
+            currentFile = fileName;
+            const files = JSON.parse(localStorage.getItem("files")) || {};
+            editor.textContent = files[fileName] || "";
+            updateLineNumbers(editor.textContent, editorLineNumbers);
+            loadFiles();
+        }
+
+        function saveFile() {
+            if (!currentFile) return;
+            const code = editor.textContent;
+            const files = JSON.parse(localStorage.getItem("files")) || {};
+            files[currentFile] = code;
+            localStorage.setItem("files", JSON.stringify(files));
+        }
+
+        function clearOutput() {
+            output.textContent = "Output will be displayed here...";
+            updateLineNumbers(output.textContent, outputLineNumbers);
+        }
+
+        function runCode() {
+            saveFile();
+            const code = editor.textContent;
+            output.textContent = "";
+            try {
+                const originalConsoleLog = console.log;
+                console.log = (message) => {
+                    output.textContent += message + "\n";
+                    updateLineNumbers(output.textContent, outputLineNumbers);
+                    originalConsoleLog(message);
+                };
+                eval(code);
+                console.log = originalConsoleLog;
+            } catch (e) {
+                output.textContent = "Error: " + e.message;
+                updateLineNumbers(output.textContent, outputLineNumbers);
+                console.error(e);
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.toggle("dark-mode");
+            body.classList.toggle("light-mode", !isDark);
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+            document.querySelector(".theme-toggle").textContent = isDark ? "🌙" : "☀";
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function clearEditor() {
+            document.getElementById("editor").textContent = "";
+            updateLines();
+        }
+
+        function clearOutput() {
+            document.getElementById("output").textContent = "";
+        }
+
+        editor.addEventListener("input", () => {
+            saveFile();
+            updateLineNumbers(editor.textContent, editorLineNumbers);
+        });
+
+        window.onload = function() {
+            document.body.classList.add(localStorage.getItem("theme") === "dark" ? "dark-mode" : "light-mode");
+            document.querySelector(".theme-toggle").textContent = 
+                document.body.classList.contains("dark-mode") ? "🌙" : "☀";
+            loadFiles();
+            updateLineNumbers(editor.textContent, editorLineNumbers);
+            updateLineNumbers(output.textContent, outputLineNumbers);
+        };
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
